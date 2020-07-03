@@ -1,0 +1,61 @@
+c01-git03:
+
+```
+$ git init demotest
+Initialized empty Git repository in C:/Users/rramy/Desktop/demotest/.git/
+
+$ touch README.md
+
+Checking the size of the folder 
+
+$ du -sh .
+0       .
+
+
+adding big file 
+
+$ dd if=/dev/random of=file.txt bs=1024 count=102400
+102400+0 records in
+102400+0 records out
+104857600 bytes (105 MB, 100 MiB) copied, 12.0199 s, 8.7 MB/s
+
+commiting the change
+
+$ git add file.txt; git commit -m "Add big file"
+[master af37057] Add big file
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+Checking folder Size.. 
+
+$ du -sh .
+211M    .
+
+```
+
+1.Did you notice any difference in the size of the repo before and after adding the big file?
+Yes. The repository size doubled its size after adding the big file. 
+
+2. What is the reason for this problem?
+Git maintains all the history of commit of each files/branches in .git/objects folder. Hence the size is grows. 
+```
+$ pwd
+/c/Users/rramy/Desktop/demotest/.git/objects/77
+
+
+$ ls -la
+total 102436
+drwxr-xr-x 1 rramy 197609         0 Jun 23 17:51 ./
+drwxr-xr-x 1 rramy 197609         0 Jun 23 18:02 ../
+-r--r--r-- 1 rramy 197609 104889501 Jun 23 17:51 93d3a17b54e68bcc3ea6c645f430abf81a588d
+```
+
+3.How do you remove something from Git history after it is pushed to the remote repository? Which commands would you use?
+git filter-branch --index-filter 'git rm -rf --cached --ignore-unmatch path_to_file HEAD'
+
+git push origin --force --all (remote origin master)
+
+4. What are the consequences of the previous action?
+
+I tried to work on this one and failed. Please provide me some reference for better understanding. 
+
+
