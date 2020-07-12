@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+    www:
+        build: 
+         context: ../../../compose/artifacts/c05-compose01/
+        ports: 
+          - "8100:80"
+        volumes:
+          - ../../../compose/artifacts/c05-compose01/src/:/var/www/html/
+        depends_on:
+          - db
+        networks:
+          - default
+        environment:
+          DB: db
+          DB_HOST: db
+          DB_USER: root 
+          DB_PASS: test
+    db:
+        image: mysql:5.7
+        environment:
+          MYSQL_ROOT_PASSWORD: test
