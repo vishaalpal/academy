@@ -1,4 +1,4 @@
-resource "aws_security_group" "da-allow_ssh-tf" {
+resource "aws_security_group" "da-allow_ssh-http-tf" {
   name = "da-allow_ssh-tf"
   description = "Allow SSH inbound traffic"
   vpc_id = "vpc-0a2b7db4956438d22"
@@ -11,6 +11,13 @@ resource "aws_security_group" "da-allow_ssh-tf" {
     cidr_blocks = [
       "122.199.23.68/32"]
   }
+ 
+  ingress {
+    protocol        = "tcp"
+    from_port       = 80
+    to_port         = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   egress {
     from_port = 0
@@ -19,11 +26,8 @@ resource "aws_security_group" "da-allow_ssh-tf" {
     cidr_blocks = [
       "0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "alb_allow_ssh"
-  }
 }
+
 
 resource "aws_launch_configuration" "da-iac-launch-config" {
   name = "da-iac-launch-config"
@@ -31,6 +35,8 @@ resource "aws_launch_configuration" "da-iac-launch-config" {
   instance_type = "t2.micro"
   key_name = "da"
   associate_public_ip_address = true
+  security_groups = [
+    aws_security_group.da-allow_ssh-http-tf.id]
   user_data = <<EOF
   #! /bin/bash
   yum update -y
@@ -72,7 +78,7 @@ resource "aws_lb" "da-iac-alb" {
   subnets = var.asg_subnets
   internal = false
   security_groups = [
-    aws_security_group.da-allow_ssh-tf.id]
+    aws_security_group.da-allow_ssh-http-tf.id]
 }
 
 resource "aws_lb_target_group" "da-iac-alb-tg" {
