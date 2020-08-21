@@ -1,13 +1,21 @@
-variable "ami_id" {
-  description = "ami to be used on the deployment"
-  type = string
+variable "vpc_id" {
+  type        = string
+  description = "VPC you will use"
 }
 
 variable "asg_subnets" {
   type = list(string)
 }
 
-variable "scale_instances" {
-  description = "positive number to increase number of instances or negative to decrease"
+variable "homecidr" {
+  type        = string
+  description = "CIDR to ssh from home"
+}
+
+variable "scale_up_by" {
   type = number
+}
+variable "scale_down_by" {
+  type        = number
+  description = "Must be negative number"
 }
