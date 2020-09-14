@@ -29,19 +29,48 @@ resource "aws_s3_bucket" "doa_lambda_bucket" {
   acl    = "private"
 }
 
+resource "aws_s3_bucket" "photo_bucket" {
+  bucket = "doa-jay-c07-photo-upload.com"
+  acl    = "private"
+}
+
 # Upload lambda code to the bucket
-resource "aws_s3_bucket_object" "doa_lambda_zip" {
-  key                    = "jay/doa_lambda_v1"
+resource "aws_s3_bucket_object" "api_lambda_zip" {
+  key                    = "jay/api_lambda"
   bucket                 = aws_s3_bucket.doa_lambda_bucket.id
   source                 = "src/main.zip"
   server_side_encryption = "AES256"
 }
 
-resource "aws_lambda_function" "doa_customer_api_lambda" {
-  depends_on = [aws_s3_bucket_object.doa_lambda_zip]
-  function_name = "doa-lambda"
+resource "aws_s3_bucket_object" "photo_handler_lambda_zip" {
+  key                    = "jay/photo_handler_lambda"
+  bucket                 = aws_s3_bucket.doa_lambda_bucket.id
+  source                 = "src/s3notify.zip"
+  server_side_encryption = "AES256"
+}
+
+resource "aws_lambda_function" "api_lambda" {
+  depends_on = [aws_s3_bucket_object.api_lambda_zip]
+  function_name = "api-lambda"
   s3_bucket     = aws_s3_bucket.doa_lambda_bucket.id
-  s3_key        = "jay/doa_lambda_v1"
+  s3_key        = "jay/api_lambda"
+  handler       = "main"
+  runtime       = "go1.x"
+
+  role = aws_iam_role.lambda_exec.arn
+
+  environment {
+    variables = {
+      DB_NAME = data.aws_ssm_parameter.db_name_param.value
+    }
+  }
+}
+
+resource "aws_lambda_function" "photo_handler_lambda" {
+  depends_on = [aws_s3_bucket_object.photo_handler_lambda_zip]
+  function_name = "photo-handler-lambda"
+  s3_bucket     = aws_s3_bucket.doa_lambda_bucket.id
+  s3_key        = "jay/photo_handler_lambda"
   handler       = "main"
   runtime       = "go1.x"
 
@@ -131,6 +160,27 @@ resource "aws_iam_policy_attachment" "db-access-policy-attach" {
   policy_arn = aws_iam_policy.db_access_policy.arn
 }
 
+resource "aws_lambda_permission" "allow_bucket" {
+  statement_id  = "AllowExecutionFormS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.photo_handler_lambda.arn
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.photo_bucket.arn
+}
+
+resource "aws_s3_bucket_notification" "photo_notify" {
+  bucket = aws_s3_bucket.photo_bucket.id
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.photo_handler_lambda.arn
+    events = [
+      "s3:ObjectCreated:*"
+    ]
+  }
+  depends_on = [
+    aws_lambda_permission.allow_bucket
+  ]
+}
+
 # API Gateway
 resource "aws_api_gateway_rest_api" "doa_api" {
   name        = "DOA API GWY"
@@ -162,7 +212,7 @@ resource "aws_api_gateway_integration" "lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   content_handling        = "CONVERT_TO_TEXT"
-  uri                     = aws_lambda_function.doa_customer_api_lambda.invoke_arn
+  uri                     = aws_lambda_function.api_lambda.invoke_arn
 }
 
 resource "aws_api_gateway_deployment" "doa_api_deployment" {
@@ -204,7 +254,7 @@ resource "aws_api_gateway_usage_plan_key" "doa_api_usage_plan_key" {
 resource "aws_lambda_permission" "allow_doa_api_gwy" {
   statement_id  = "AllowExecutionFromApiGwy"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.doa_customer_api_lambda.function_name
+  function_name = aws_lambda_function.api_lambda.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.doa_api.execution_arn}/*/*"
 }
