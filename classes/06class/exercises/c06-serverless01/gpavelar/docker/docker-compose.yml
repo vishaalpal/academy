@@ -1,0 +1,17 @@
+---
+version: "3"
+services:
+  aws:
+    build: .
+    working_dir: /app
+    volumes:
+      - ${PWD}:/app
+    env_file:
+      - .env
+  terraform:
+    image: hashicorp/terraform:0.13.2
+    working_dir: /app/terraform
+    volumes:
+      - ${PWD}:/app
+    env_file:
+      - .env
